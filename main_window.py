@@ -31,12 +31,13 @@ from PySide6.QtCore import Qt, QSize, QMargins
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QAction
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
 
-from data_manager import DataManager, MonthSheet, Transaction, RecurringManager
+from data_manager import DataManager, MonthSheet, Transaction, RecurringManager, SavingsManager
 from transaction_dialog import TransactionDialog
 from about_dialog import AboutDialog
 from charts_dialog import ChartsDialog
 from pin_manager import require_pin, is_pin_set, PinSetupDialog, PinResetDialog
 from recurring_dialog import RecurringDialog
+from savings_dialog import SavingsDialog
 
 
 MONTH_NAMES_DE = [
@@ -63,6 +64,7 @@ class MainWindow(QMainWindow):
 
         self.dm = DataManager()
         self.rm = RecurringManager(self.dm.data_dir)
+        self.sm = SavingsManager(self.dm.data_dir)
 
         # Current month
         today = date.today()
@@ -142,6 +144,11 @@ class MainWindow(QMainWindow):
         recurring_action.triggered.connect(self._show_recurring)
         file_menu.addAction(recurring_action)
 
+        savings_action = QAction("Sparziele verwalten...", self)
+        savings_action.setStatusTip("Sparziele und Fortschritt verfolgen")
+        savings_action.triggered.connect(self._show_savings)
+        file_menu.addAction(savings_action)
+
         # Statistiken menu
         stats_menu = menu_bar.addMenu("Statistiken")
 
@@ -182,6 +189,18 @@ class MainWindow(QMainWindow):
         dlg = RecurringDialog(self, recurring_manager=self.rm)
         dlg.exec()
         self._load_month()  # refresh to show newly applied recurring items
+
+    def _show_savings(self):
+        """Open the savings goals manager."""
+        dlg = SavingsDialog(
+            self, 
+            savings_manager=self.sm, 
+            data_manager=self.dm,
+            year=self.current_year, 
+            month=self.current_month, 
+            on_change=self._load_month
+        )
+        dlg.exec()
 
     def _setup_pin(self):
         dlg = PinSetupDialog(self)
@@ -474,10 +493,15 @@ class MainWindow(QMainWindow):
         return (self.current_year, self.current_month) == (today.year, today.month)
 
     def _load_month(self):
-        """Load the current month's data, apply recurring items (only for current/past), and refresh UI."""
+        """Load the current month's data, apply recurring items (only for current/past), update rollover, and refresh UI."""
         self.sheet = self.dm.load_month(self.current_year, self.current_month)
+        
+        # Update rollover from previous month
+        self.dm.update_rollover(self.sheet)
+
         if not self._is_future_month():
             self.rm.apply_recurring(self.sheet, self.dm)
+        
         self._update_month_label()
         self._update_summary()
         self._update_chart()
@@ -640,6 +664,17 @@ class MainWindow(QMainWindow):
             desc_item = QTableWidgetItem(tx.description)
             desc_item.setForeground(QColor("#8892b0"))
             self.table.setItem(row, 4, desc_item)
+
+            # Special styling for rollover
+            if getattr(tx, "is_rollover", False):
+                font = QFont()
+                font.setItalic(True)
+                for col in range(5):
+                    item = self.table.item(row, col)
+                    item.setFont(font)
+                    item.setBackground(QColor("#1e293b"))
+                    if col == 4: # Desc
+                        item.setText(item.text() + " (Automatisch)")
 
         self.table.setSortingEnabled(True)
 

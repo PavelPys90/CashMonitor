@@ -81,7 +81,11 @@ class PinSetupDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("🔒 PIN einrichten")
-        self.setFixedSize(380, 280)
+        self.require_old = is_pin_set()
+        
+        height = 360 if self.require_old else 280
+        self.setFixedSize(380, height)
+        
         self.setModal(True)
         self._setup_ui()
 
@@ -108,7 +112,6 @@ class PinSetupDialog(QDialog):
         layout.addWidget(sep)
 
         # Old PIN (if exists)
-        self.require_old = is_pin_set()
         if self.require_old:
             self.old_pin_edit = QLineEdit()
             self.old_pin_edit.setPlaceholderText("Alte PIN eingeben")

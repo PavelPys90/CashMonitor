@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QComboBox,
+    QCheckBox,
     QFrame,
     QSizePolicy,
 )
@@ -27,7 +28,7 @@ from PySide6.QtCharts import (
     QStackedBarSeries,
 )
 
-from data_manager import DataManager
+from data_manager import DataManager, MonthSheet, RecurringManager
 
 MONTH_NAMES_SHORT = [
     "", "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
@@ -54,7 +55,8 @@ class ChartsDialog(QDialog):
     def __init__(self, parent=None, data_manager: DataManager = None):
         super().__init__(parent)
         self.dm = data_manager or DataManager()
-        self.setWindowTitle("📊 Statistiken – CashMonitor")
+        self.rm = RecurringManager(self.dm.data_dir)
+        self.setWindowTitle("Statistiken - CashMonitor")
         self.setMinimumSize(900, 620)
         self.resize(1000, 700)
         self.setModal(True)
@@ -102,6 +104,15 @@ class ChartsDialog(QDialog):
         self.chart_selector.setMinimumWidth(250)
         self.chart_selector.currentIndexChanged.connect(self._on_chart_selected)
         header_layout.addWidget(self.chart_selector)
+
+        # Prognose toggle
+        self.prognose_check = QCheckBox("Mit Prognose")
+        self.prognose_check.setToolTip("Zukuenftige Monate basierend auf Fixeintraegen projizieren")
+        self.prognose_check.setStyleSheet(
+            "QCheckBox { color: #fbbf24; font-weight: 600; margin-left: 12px; }"
+        )
+        self.prognose_check.toggled.connect(self._on_prognose_toggled)
+        header_layout.addWidget(self.prognose_check)
 
         layout.addLayout(header_layout)
 
@@ -170,13 +181,49 @@ class ChartsDialog(QDialog):
         axis.setLabelsFont(label_font)
 
     def _load_all_data(self):
-        """Load all available months and return sorted list of (label, sheet)."""
+        """Load all available months and optionally project future months."""
+        from datetime import date
         results = []
         for year, month in self._available_months:
             sheet = self.dm.load_month(year, month)
             label = f"{MONTH_NAMES_SHORT[month]} {year}"
             results.append((label, sheet))
+
+        # Add projected future months if prognose is enabled
+        if self.prognose_check.isChecked() and self.rm.items:
+            active_items = [r for r in self.rm.items if r.active]
+            if active_items:
+                today = date.today()
+                # Project next 3 months
+                for offset in range(1, 4):
+                    m = today.month + offset
+                    y = today.year
+                    while m > 12:
+                        m -= 12
+                        y += 1
+                    # Skip if real data already exists
+                    if (y, m) in self._available_months:
+                        continue
+                    proj_sheet = MonthSheet(y, m)
+                    for item in active_items:
+                        from data_manager import Transaction
+                        tx_date = f"{y:04d}-{m:02d}-{item.day:02d}"
+                        tx = Transaction(
+                            tx_date=tx_date,
+                            tx_type=item.type,
+                            category=item.category,
+                            amount=item.amount,
+                            description=item.description,
+                        )
+                        proj_sheet.transactions.append(tx)
+                    label = f"{MONTH_NAMES_SHORT[m]} {y} *"
+                    results.append((label, proj_sheet))
+
         return results
+
+    def _on_prognose_toggled(self, checked: bool):
+        """Refresh the current chart when prognose toggle changes."""
+        self._on_chart_selected(self.chart_selector.currentIndex())
 
     # ─── Chart Builders ──────────────────────────────────────────
 

@@ -316,7 +316,6 @@ class MainWindow(QMainWindow):
         ec_layout.addWidget(self.expense_title)
         ec_layout.addWidget(self.expense_value)
         grid.addWidget(self.expense_card, 0, 1)
-
         # Balance card (spans both columns)
         self.balance_card = self._make_card("balanceCard")
         self.balance_title = QLabel("BILANZ")
@@ -327,6 +326,19 @@ class MainWindow(QMainWindow):
         bc_layout.addWidget(self.balance_title)
         bc_layout.addWidget(self.balance_value)
         grid.addWidget(self.balance_card, 1, 0, 1, 2)
+
+        # Prognose label (spans both columns, hidden by default)
+        self.prognose_label = QLabel("")
+        self.prognose_label.setObjectName("prognoseLabel")
+        self.prognose_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.prognose_label.setWordWrap(True)
+        self.prognose_label.setStyleSheet(
+            "color: #fbbf24; font-size: 12px; padding: 8px 12px; "
+            "background-color: rgba(251, 191, 36, 0.08); "
+            "border: 1px dashed #fbbf24; border-radius: 8px;"
+        )
+        self.prognose_label.setVisible(False)
+        grid.addWidget(self.prognose_label, 2, 0, 1, 2)
 
         return grid
 
@@ -451,10 +463,16 @@ class MainWindow(QMainWindow):
 
     # ─── Data Loading ────────────────────────────────────────────
 
+    def _is_future_month(self) -> bool:
+        """Check if the currently displayed month is in the future."""
+        today = date.today()
+        return (self.current_year, self.current_month) > (today.year, today.month)
+
     def _load_month(self):
-        """Load the current month's data, apply recurring items, and refresh UI."""
+        """Load the current month's data, apply recurring items (only for current/past), and refresh UI."""
         self.sheet = self.dm.load_month(self.current_year, self.current_month)
-        self.rm.apply_recurring(self.sheet, self.dm)
+        if not self._is_future_month():
+            self.rm.apply_recurring(self.sheet, self.dm)
         self._update_month_label()
         self._update_summary()
         self._update_chart()
@@ -462,7 +480,10 @@ class MainWindow(QMainWindow):
 
     def _update_month_label(self):
         name = MONTH_NAMES_DE[self.current_month]
-        self.month_label.setText(f"{name} {self.current_year}")
+        if self._is_future_month():
+            self.month_label.setText(f"{name} {self.current_year}  (Zukunft)")
+        else:
+            self.month_label.setText(f"{name} {self.current_year}")
 
     def _update_summary(self):
         income = self.sheet.total_income
@@ -481,6 +502,27 @@ class MainWindow(QMainWindow):
         # Force style refresh
         self.balance_value.style().unpolish(self.balance_value)
         self.balance_value.style().polish(self.balance_value)
+
+        # Prognose for future months
+        if self._is_future_month():
+            prog_income, prog_expense = self._get_prognose()
+            prog_balance = prog_income - prog_expense
+            sign = "+" if prog_balance >= 0 else ""
+            self.prognose_label.setText(
+                f"Prognose (Fixeintraege):  "
+                f"Einnahmen {self._fmt_money(prog_income)}  |  "
+                f"Ausgaben {self._fmt_money(prog_expense)}  |  "
+                f"Bilanz {sign}{self._fmt_money(prog_balance)}"
+            )
+            self.prognose_label.setVisible(True)
+        else:
+            self.prognose_label.setVisible(False)
+
+    def _get_prognose(self) -> tuple[float, float]:
+        """Calculate projected income and expenses from active recurring items."""
+        prog_income = sum(r.amount for r in self.rm.items if r.active and r.type == "income")
+        prog_expense = sum(r.amount for r in self.rm.items if r.active and r.type == "expense")
+        return round(prog_income, 2), round(prog_expense, 2)
 
     def _update_chart(self):
         self.chart.removeAllSeries()

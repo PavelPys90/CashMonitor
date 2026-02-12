@@ -336,6 +336,12 @@ class RecurringManager:
             if item.id in existing_recurring_ids:
                 continue
 
+            # For current month: only apply if day <= today
+            today = date.today()
+            if sheet.year == today.year and sheet.month == today.month:
+                if item.day > today.day:
+                    continue
+
             tx_date = f"{sheet.year:04d}-{sheet.month:02d}-{item.day:02d}"
             tx = Transaction(
                 tx_date=tx_date,

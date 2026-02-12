@@ -468,6 +468,11 @@ class MainWindow(QMainWindow):
         today = date.today()
         return (self.current_year, self.current_month) > (today.year, today.month)
 
+    def _is_current_month(self) -> bool:
+        """Check if the currently displayed month is the actual current month."""
+        today = date.today()
+        return (self.current_year, self.current_month) == (today.year, today.month)
+
     def _load_month(self):
         """Load the current month's data, apply recurring items (only for current/past), and refresh UI."""
         self.sheet = self.dm.load_month(self.current_year, self.current_month)
@@ -515,6 +520,29 @@ class MainWindow(QMainWindow):
                 f"Bilanz {sign}{self._fmt_money(prog_balance)}"
             )
             self.prognose_label.setVisible(True)
+        elif self._is_current_month():
+            # Calculate pending recurring items for rest of the month
+            today = date.today()
+            pending_items = [i for i in self.rm.items if i.active and i.day > today.day]
+            
+            # Filter out items that might have been manually added already (by recurring_id)
+            existing_ids = {t.recurring_id for t in self.sheet.transactions if t.recurring_id}
+            pending_items = [i for i in pending_items if i.id not in existing_ids]
+
+            if pending_items:
+                p_income = sum(i.amount for i in pending_items if i.type == "income")
+                p_expense = sum(i.amount for i in pending_items if i.type == "expense")
+                p_balance = p_income - p_expense
+                sign = "+" if p_balance >= 0 else ""
+                self.prognose_label.setText(
+                    f"Ausstehend (Fixeintraege):  "
+                    f"Einnahmen {self._fmt_money(p_income)}  |  "
+                    f"Ausgaben {self._fmt_money(p_expense)}  |  "
+                    f"Bilanz {sign}{self._fmt_money(p_balance)}"
+                )
+                self.prognose_label.setVisible(True)
+            else:
+                self.prognose_label.setVisible(False)
         else:
             self.prognose_label.setVisible(False)
 

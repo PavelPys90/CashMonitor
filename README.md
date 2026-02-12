@@ -59,6 +59,15 @@ CashMonitor/
 └── data/                   ← Monatsdaten (YYYY-MM.json)
 ```
 
+## 🛠️ Entwicklung
+
+### Pull Requests
+Änderungen am `main`-Branch dürfen nur über **Pull Requests** erfolgen.
+1.  Erstelle einen neuen Branch (`feature/xyz` oder `fix/abc`).
+2.  Mache deine Änderungen.
+3.  Erstelle einen Pull Request auf GitHub.
+4.  Nach Review und Tests wird gemerged.
+
 ## 📊 Datenformat
 
 Pro Monat eine JSON-Datei (`data/2026-02.json`):

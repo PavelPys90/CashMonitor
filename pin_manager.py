@@ -23,7 +23,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 
-CONFIG_FILE = Path(__file__).parent / "config.json"
+from utils import get_app_dir
+
+CONFIG_FILE = get_app_dir() / "config.json"
 RESET_CODE = "CASHMONITOR-RESET-2026"
 
 
@@ -259,9 +261,8 @@ class PinResetDialog(QDialog):
         layout.addWidget(title)
 
         info = QLabel(
-            "Gib den Reset-Code ein um die PIN zu löschen.\n"
-            "Den Code findest du in der Datei:\n"
-            "pin_manager.py → RESET_CODE"
+            f"Gib den Reset-Code ein um die PIN zu löschen.\n"
+            f"Code: {RESET_CODE}"
         )
         info.setStyleSheet("color: #8892b0; font-size: 12px;")
         info.setWordWrap(True)

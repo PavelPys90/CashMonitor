@@ -10,6 +10,8 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
 
+from utils import get_app_dir
+
 
 # Default categories
 EXPENSE_CATEGORIES = [
@@ -160,8 +162,7 @@ class DataManager:
 
     def __init__(self, data_dir: Optional[str] = None):
         if data_dir is None:
-            base = Path(__file__).parent
-            self.data_dir = base / "data"
+            self.data_dir = get_app_dir() / "data"
         else:
             self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -472,8 +473,7 @@ class SavingsManager:
 
     def __init__(self, data_dir: Optional[Path] = None):
         if data_dir is None:
-             base = Path(__file__).parent
-             self.file_path = base / "data" / "savings.json"
+             self.file_path = get_app_dir() / "data" / "savings.json"
         else:
             self.file_path = data_dir / "savings.json"
         

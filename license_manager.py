@@ -30,6 +30,7 @@ class LicenseManager:
         self.license_path = self.app_dir / LICENSE_FILE_NAME
         self.public_key = serialization.load_pem_public_key(PUBLIC_KEY_PEM)
         self.license_data: Optional[Dict] = None
+        self.last_error = ""
 
     def load_license(self) -> bool:
         """
@@ -45,6 +46,7 @@ class LicenseManager:
 
             signature_b64 = data.get("signature")
             if not signature_b64:
+                self.last_error = "Signatur fehlt in der Datei."
                 return False
 
             signature = base64.b64decode(signature_b64)
@@ -69,9 +71,11 @@ class LicenseManager:
             try:
                 expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
                 if date.today() > expiry_date:
+                    self.last_error = f"Lizenz ist abgelaufen am {expiry_str}"
                     print(f"License expired on {expiry_str}")
                     return False
             except ValueError:
+                self.last_error = "Ungültiges Datumsformat in Lizenz."
                 print("Invalid expiry date format")
                 return False
 
@@ -79,6 +83,7 @@ class LicenseManager:
             return True
 
         except (json.JSONDecodeError, InvalidSignature, Exception) as e:
+            self.last_error = f"Validierung fehlgeschlagen: {e}"
             print(f"License verification failed: {e}")
             return False
 
@@ -94,6 +99,7 @@ class LicenseManager:
             temp_lm = LicenseManager()
             temp_lm.license_path = source_path
             if not temp_lm.load_license():
+                self.last_error = temp_lm.last_error
                 return False
             
             # If valid, copy it

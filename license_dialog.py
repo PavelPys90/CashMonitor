@@ -63,4 +63,5 @@ class LicenseDialog(QDialog):
                 QMessageBox.information(self, "Erfolg", "Lizenz erfolgreich installiert!")
                 self.accept()
             else:
-                QMessageBox.critical(self, "Fehler", "Ungültige Lizenzdatei oder Signatur falsch.")
+                msg = f"Fehler bei der Lizenzprüfung:\n{self.lm.last_error}"
+                QMessageBox.critical(self, "Fehler", msg)

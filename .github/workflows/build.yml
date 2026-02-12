@@ -57,6 +57,8 @@ jobs:
           pyinstaller --onefile --windowed `
             --name CashMonitor `
             --add-data "style.qss;." `
+            --hidden-import "cffi" `
+            --collect-all "cryptography" `
             main.py
 
       - name: Upload Windows artifact

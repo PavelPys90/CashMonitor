@@ -107,6 +107,17 @@ class PinSetupDialog(QDialog):
         sep.setStyleSheet("color: #0f3460;")
         layout.addWidget(sep)
 
+        # Old PIN (if exists)
+        self.require_old = is_pin_set()
+        if self.require_old:
+            self.old_pin_edit = QLineEdit()
+            self.old_pin_edit.setPlaceholderText("Alte PIN eingeben")
+            self.old_pin_edit.setEchoMode(QLineEdit.EchoMode.Password)
+            self.old_pin_edit.setMaxLength(6)
+            self.old_pin_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.old_pin_edit.setStyleSheet("font-size: 14px; padding: 8px; border: 1px solid #f59e0b;")
+            layout.addWidget(self.old_pin_edit)
+
         # PIN input
         self.pin_edit = QLineEdit()
         self.pin_edit.setPlaceholderText("PIN eingeben (4-6 Ziffern)")
@@ -150,6 +161,13 @@ class PinSetupDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def _on_save(self):
+        # Verify old PIN first
+        if self.require_old:
+            old_pin = self.old_pin_edit.text().strip()
+            if not verify_pin(old_pin):
+                self.error_label.setText("Alte PIN ist falsch!")
+                return
+
         pin = self.pin_edit.text().strip()
         confirm = self.confirm_edit.text().strip()
 

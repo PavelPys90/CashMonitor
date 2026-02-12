@@ -1,0 +1,99 @@
+name: Build CashMonitor
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed \
+            --name CashMonitor \
+            --add-data "style.qss:." \
+            main.py
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CashMonitor-Linux
+          path: dist/CashMonitor
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed `
+            --name CashMonitor `
+            --add-data "style.qss;." `
+            main.py
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CashMonitor-Windows
+          path: dist/CashMonitor.exe
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CashMonitor-Linux
+          path: linux
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CashMonitor-Windows
+          path: windows
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CashMonitor ${{ github.ref_name }}
+          body: |
+            ## 💰 CashMonitor ${{ github.ref_name }}
+
+            ### Downloads
+            - **Windows**: `CashMonitor.exe` – Einfach herunterladen und starten
+            - **Linux**: `CashMonitor` – Nach Download ausführbar machen: `chmod +x CashMonitor`
+          files: |
+            linux/CashMonitor
+            windows/CashMonitor.exe

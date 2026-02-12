@@ -23,7 +23,7 @@
 
 ### Setup
 ```bash
-git clone https://github.com/DEIN-USERNAME/CashMonitor.git
+git clone https://github.com/PavelPys90/CashMonitor.git
 cd CashMonitor
 python3 -m venv venv
 source venv/bin/activate      # Linux/Mac

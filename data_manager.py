@@ -54,6 +54,7 @@ class Transaction:
         amount: float,
         description: str = "",
         tx_id: Optional[str] = None,
+        recurring_id: Optional[str] = None,
     ):
         self.id = tx_id or str(uuid.uuid4())
         self.date = tx_date  # "YYYY-MM-DD"
@@ -61,9 +62,10 @@ class Transaction:
         self.category = category
         self.amount = round(amount, 2)
         self.description = description
+        self.recurring_id = recurring_id  # links to RecurringItem.id if auto-generated
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "id": self.id,
             "date": self.date,
             "type": self.type,
@@ -71,6 +73,9 @@ class Transaction:
             "amount": self.amount,
             "description": self.description,
         }
+        if self.recurring_id:
+            d["recurring_id"] = self.recurring_id
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "Transaction":
@@ -81,6 +86,7 @@ class Transaction:
             category=data["category"],
             amount=data["amount"],
             description=data.get("description", ""),
+            recurring_id=data.get("recurring_id"),
         )
 
 
@@ -206,9 +212,142 @@ class DataManager:
         """Return a sorted list of (year, month) tuples for which data exists."""
         months = []
         for f in self.data_dir.glob("*.json"):
+            if f.stem == "recurring":
+                continue
             try:
                 parts = f.stem.split("-")
                 months.append((int(parts[0]), int(parts[1])))
             except (ValueError, IndexError):
                 continue
         return sorted(months)
+
+
+class RecurringItem:
+    """A recurring transaction template."""
+
+    def __init__(
+        self,
+        day: int,
+        tx_type: str,
+        category: str,
+        amount: float,
+        description: str = "",
+        item_id: Optional[str] = None,
+        active: bool = True,
+    ):
+        self.id = item_id or str(uuid.uuid4())
+        self.day = min(max(day, 1), 28)  # clamp to 1-28
+        self.type = tx_type
+        self.category = category
+        self.amount = round(amount, 2)
+        self.description = description
+        self.active = active
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "day": self.day,
+            "type": self.type,
+            "category": self.category,
+            "amount": self.amount,
+            "description": self.description,
+            "active": self.active,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RecurringItem":
+        return cls(
+            item_id=data.get("id"),
+            day=data.get("day", 1),
+            tx_type=data["type"],
+            category=data["category"],
+            amount=data["amount"],
+            description=data.get("description", ""),
+            active=data.get("active", True),
+        )
+
+
+class RecurringManager:
+    """Manages recurring transaction templates."""
+
+    def __init__(self, data_dir: Path):
+        self.data_dir = data_dir
+        self.items: list[RecurringItem] = []
+        self._load()
+
+    @property
+    def _file_path(self) -> Path:
+        return self.data_dir / "recurring.json"
+
+    def _load(self):
+        if self._file_path.exists():
+            with open(self._file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.items = [
+                RecurringItem.from_dict(r) for r in data.get("recurring", [])
+            ]
+        else:
+            self.items = []
+
+    def _save(self):
+        data = {"recurring": [item.to_dict() for item in self.items]}
+        with open(self._file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def add(self, item: RecurringItem):
+        self.items.append(item)
+        self._save()
+
+    def delete(self, item_id: str) -> bool:
+        for i, item in enumerate(self.items):
+            if item.id == item_id:
+                self.items.pop(i)
+                self._save()
+                return True
+        return False
+
+    def update(self, item_id: str, updated: RecurringItem) -> bool:
+        for i, item in enumerate(self.items):
+            if item.id == item_id:
+                updated.id = item_id
+                self.items[i] = updated
+                self._save()
+                return True
+        return False
+
+    def toggle_active(self, item_id: str) -> bool:
+        for item in self.items:
+            if item.id == item_id:
+                item.active = not item.active
+                self._save()
+                return True
+        return False
+
+    def apply_recurring(self, sheet: MonthSheet, dm: "DataManager"):
+        """Apply all active recurring items to a month sheet if not already present."""
+        existing_recurring_ids = {
+            t.recurring_id for t in sheet.transactions if t.recurring_id
+        }
+
+        added = False
+        for item in self.items:
+            if not item.active:
+                continue
+            if item.id in existing_recurring_ids:
+                continue
+
+            tx_date = f"{sheet.year:04d}-{sheet.month:02d}-{item.day:02d}"
+            tx = Transaction(
+                tx_date=tx_date,
+                tx_type=item.type,
+                category=item.category,
+                amount=item.amount,
+                description=item.description,
+                recurring_id=item.id,
+            )
+            sheet.transactions.append(tx)
+            added = True
+
+        if added:
+            sheet.transactions.sort(key=lambda t: t.date)
+            dm.save_month(sheet)

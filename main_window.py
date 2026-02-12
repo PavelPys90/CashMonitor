@@ -31,11 +31,12 @@ from PySide6.QtCore import Qt, QSize, QMargins
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QAction
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
 
-from data_manager import DataManager, MonthSheet, Transaction
+from data_manager import DataManager, MonthSheet, Transaction, RecurringManager
 from transaction_dialog import TransactionDialog
 from about_dialog import AboutDialog
 from charts_dialog import ChartsDialog
 from pin_manager import require_pin, is_pin_set, PinSetupDialog, PinResetDialog
+from recurring_dialog import RecurringDialog
 
 
 MONTH_NAMES_DE = [
@@ -61,6 +62,7 @@ class MainWindow(QMainWindow):
         self.resize(1280, 800)
 
         self.dm = DataManager()
+        self.rm = RecurringManager(self.dm.data_dir)
 
         # Current month
         today = date.today()
@@ -133,6 +135,13 @@ class MainWindow(QMainWindow):
         export_all_action.triggered.connect(self._export_all_months)
         file_menu.addAction(export_all_action)
 
+        file_menu.addSeparator()
+
+        recurring_action = QAction("Wiederkehrende Eintraege", self)
+        recurring_action.setStatusTip("Fixkosten und Fixeinnahmen verwalten")
+        recurring_action.triggered.connect(self._show_recurring)
+        file_menu.addAction(recurring_action)
+
         # Statistiken menu
         stats_menu = menu_bar.addMenu("Statistiken")
 
@@ -168,6 +177,11 @@ class MainWindow(QMainWindow):
     def _show_about(self):
         dlg = AboutDialog(self)
         dlg.exec()
+
+    def _show_recurring(self):
+        dlg = RecurringDialog(self, recurring_manager=self.rm)
+        dlg.exec()
+        self._load_month()  # refresh to show newly applied recurring items
 
     def _setup_pin(self):
         dlg = PinSetupDialog(self)
@@ -438,8 +452,9 @@ class MainWindow(QMainWindow):
     # ─── Data Loading ────────────────────────────────────────────
 
     def _load_month(self):
-        """Load the current month's data and refresh UI."""
+        """Load the current month's data, apply recurring items, and refresh UI."""
         self.sheet = self.dm.load_month(self.current_year, self.current_month)
+        self.rm.apply_recurring(self.sheet, self.dm)
         self._update_month_label()
         self._update_summary()
         self._update_chart()
@@ -523,6 +538,8 @@ class MainWindow(QMainWindow):
 
             # Type
             type_text = "Einnahme" if tx.type == "income" else "Ausgabe"
+            if tx.recurring_id:
+                type_text = "\u21bb " + type_text
             type_item = QTableWidgetItem(type_text)
             type_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             type_color = QColor("#10b981") if tx.type == "income" else QColor("#ef4444")

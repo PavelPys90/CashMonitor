@@ -68,7 +68,6 @@ jobs:
   release:
     needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
@@ -84,12 +83,22 @@ jobs:
           name: CashMonitor-Windows
           path: windows
 
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v1.0.0-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: CashMonitor ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: CashMonitor ${{ steps.version.outputs.tag }}
           body: |
-            ## 💰 CashMonitor ${{ github.ref_name }}
+            ## 💰 CashMonitor ${{ steps.version.outputs.tag }}
 
             ### Downloads
             - **Windows**: `CashMonitor.exe` – Einfach herunterladen und starten

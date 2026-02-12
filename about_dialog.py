@@ -16,7 +16,7 @@ from PySide6.QtGui import QFont
 
 
 APP_NAME = "CashMonitor"
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.4.1"
 APP_AUTHOR = "Pavel Pys"
 APP_YEAR = "2026"
 APP_DESCRIPTION = "Persönlicher Finanz-Tracker zur Verwaltung monatlicher Ein- und Ausgaben."

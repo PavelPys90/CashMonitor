@@ -1,8 +1,8 @@
-
 import json
 import base64
 from pathlib import Path
 from typing import Optional, Dict
+from datetime import datetime, date
 
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -63,6 +63,17 @@ class LicenseManager:
                 padding.PKCS1v15(),
                 hashes.SHA256()
             )
+
+            # Check expiry
+            expiry_str = verify_data.get("expiry", "9999-12-31")
+            try:
+                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                if date.today() > expiry_date:
+                    print(f"License expired on {expiry_str}")
+                    return False
+            except ValueError:
+                print("Invalid expiry date format")
+                return False
 
             self.license_data = verify_data
             return True

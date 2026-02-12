@@ -11,6 +11,9 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont
 
 from main_window import MainWindow
+from license_manager import LicenseManager
+from license_dialog import LicenseDialog
+from PySide6.QtWidgets import QDialog
 
 
 def get_resource_path(relative_path: str) -> Path:
@@ -41,6 +44,13 @@ def main():
     stylesheet = load_stylesheet()
     if stylesheet:
         app.setStyleSheet(stylesheet)
+
+    # Check License
+    lm = LicenseManager()
+    if not lm.load_license():
+        dlg = LicenseDialog(lm)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            sys.exit(0)
 
     # Create and show main window
     window = MainWindow()

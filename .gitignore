@@ -1,29 +1,18 @@
-# Python
+venv/
 __pycache__/
-*.py[cod]
-*$py.class
-*.pyo
-*.egg-info/
+.idea/
+.vscode/
+*.pyc
+data/
+*.db
+.DS_Store
 dist/
 build/
 *.spec
-
-# Virtual Environment
-venv/
-.venv/
-env/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# CashMonitor Data (private)
-data/
 config.json
 
-# OS
-.DS_Store
-Thumbs.db
+# License related
+private_key.pem
+generate_keys.py
+generate_license.py
+license.dat

@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
 ![PySide6](https://img.shields.io/badge/PySide6-6.6+-green?logo=qt&logoColor=white)
-![License](https://img.shields.io/badge/Lizenz-Privat-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ## ✨ Features
 
@@ -12,8 +12,11 @@
 - ➕ **Einnahmen & Ausgaben** – Datum, Kategorie, Betrag, Beschreibung
 - 📊 **Pie-Chart** – Ausgaben nach Kategorie visualisiert
 - 📈 **Statistiken** – Multi-Monats-Charts (Bilanz-Verlauf, Sparquote, Top-Kategorien)
-- 🔒 **PIN-Schutz** – Bearbeiten/Löschen nur mit PIN
-- 📄 **CSV-Export** – Für Excel, LibreCalc oder weitere Analyse
+- � **CSV-Export** – Für Excel, LibreCalc oder weitere Analyse
+- 🔄 **Wiederkehrende Einträge** – Fixkosten & Daueraufträge automatisch
+- � **Sparziele & Rollover** – Ziele verfolgen & automatischer Saldo-Übertrag
+- 🔮 **Prognose** – Vorschau auf kommende Monate und ausstehende Fixkosten
+- 🔒 **PIN-Schutz** – Bearbeiten/Löschen nur mit PIN (inkl. Reset-Code)
 - 🌙 **Dark Theme** – Modernes, dunkles Design
 
 ## 🚀 Installation
@@ -75,6 +78,4 @@ Pro Monat eine JSON-Datei (`data/2026-02.json`):
 }
 ```
 
-## 👤 Autor
 
-**Pavel Pys** – © 2026

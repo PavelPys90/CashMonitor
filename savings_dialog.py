@@ -304,7 +304,7 @@ class SavingsDialog(QDialog):
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table.setItem(row, 4, status_item)
             
-        self.table.setRowHeight(row, 50) 
+            self.table.setRowHeight(row, 50) 
 
     def _selected_id(self):
         row = self.table.currentRow()

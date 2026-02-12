@@ -21,7 +21,7 @@ APP_AUTHOR = "Pavel Pys"
 APP_YEAR = "2026"
 APP_DESCRIPTION = "Persönlicher Finanz-Tracker zur Verwaltung monatlicher Ein- und Ausgaben."
 APP_TECH = "Python · PySide6 · QtCharts · JSON"
-APP_LICENSE = "Privat"
+APP_LICENSE = "MIT License"
 
 
 class AboutDialog(QDialog):
